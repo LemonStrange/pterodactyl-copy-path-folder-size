@@ -65,6 +65,16 @@ sudo -u www-data php artisan optimize:clear
 
 Sau đó vào **Files**, chọn một thư mục và bấm **Size**.
 
+## Demo
+
+Danh sách thư mục trước khi xem dung lượng:
+
+![Danh sách thư mục trong Files](demo/folder-list-before.png)
+
+Sau khi bấm **Size**:
+
+![Dung lượng thư mục hiển thị trong Files](demo/folder-size-result.png)
+
 ## Helper
 
 Có thể chạy thử trực tiếp:
