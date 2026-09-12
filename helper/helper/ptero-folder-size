@@ -1,0 +1,37 @@
+#!/bin/bash
+set -euo pipefail
+
+uuid="${1:-}"
+requested="${2:-/}"
+remote_host="${3:-}"
+root="/var/lib/pterodactyl/volumes/${uuid}"
+
+[[ "$uuid" =~ ^[0-9a-fA-F-]{36}$ ]] || exit 2
+[[ "$requested" != *$'\n'* && "$requested" != *$'\r'* ]] || exit 2
+
+if [[ -n "$remote_host" && "$remote_host" != "127.0.0.1" && "$remote_host" != "localhost" ]]; then
+    if [[ ! -e "$root" ]]; then
+        [[ "$remote_host" =~ ^[0-9A-Za-z_.:-]+$ ]] || exit 2
+        exec timeout --signal=TERM --kill-after=2s 30s ssh -n \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=5 \
+            -o ServerAliveInterval=5 \
+            -o ServerAliveCountMax=2 \
+            "root@${remote_host}" \
+            /usr/local/sbin/ptero-folder-size "$uuid" "$requested"
+    fi
+fi
+
+relative="${requested#/}"
+IFS='/' read -ra parts <<< "$relative"
+for part in "${parts[@]}"; do
+    [[ "$part" != ".." ]] || exit 2
+done
+
+root_real="$(realpath -e -- "$root")"
+target_real="$(realpath -e -- "$root/$relative")"
+[[ -d "$target_real" ]] || exit 3
+[[ "$target_real" == "$root_real" || "$target_real" == "$root_real/"* ]] || exit 2
+
+exec timeout --signal=TERM --kill-after=2s 23s nice -n 19 ionice -c 3 du -sb -- "$target_real" | awk '{print $1}'
