@@ -1,4 +1,4 @@
-diff --git "a/work\\patch-check\\app\\Http\\Controllers\\Api\\Client\\Servers\\FileController.php" "b/work\\patch-check\\current\\app\\Http\\Controllers\\Api\\Client\\Servers\\FileController.php"
+diff --git a/app/Http/Controllers/Api/Client/Servers/FileController.php b/app/Http/Controllers/Api/Client/Servers/FileController.php
 index d5ee9e7..9eb2268 100644
 --- a/app/Http/Controllers/Api/Client/Servers/FileController.php
 +++ b/app/Http/Controllers/Api/Client/Servers/FileController.php

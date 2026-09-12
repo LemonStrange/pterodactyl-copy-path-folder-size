@@ -1,4 +1,4 @@
-diff --git "a/work\\patch-check\\resources\\scripts\\components\\server\\files\\FileObjectRow.tsx" "b/work\\patch-check\\current\\resources\\scripts\\components\\server\\files\\FileObjectRow.tsx"
+diff --git a/resources/scripts/components/server/files/FileObjectRow.tsx b/resources/scripts/components/server/files/FileObjectRow.tsx
 index c25930e..a7b9782 100644
 --- a/resources/scripts/components/server/files/FileObjectRow.tsx
 +++ b/resources/scripts/components/server/files/FileObjectRow.tsx
