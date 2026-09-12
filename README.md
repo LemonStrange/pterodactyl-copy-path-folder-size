@@ -1,10 +1,10 @@
-# Folder Size for Pterodactyl
+# Folder Size cho Pterodactyl
 
-Bản vá nhỏ cho Pterodactyl Panel 1.15.1: thêm nút `Size` vào các thư mục trong File Manager.
+Bản vá này thêm nút `Size` vào danh sách thư mục của Pterodactyl Panel. Bấm vào nút để xem dung lượng ngay trên trang **Files**.
 
-Panel ưu tiên helper chạy trên node chứa volume, có fallback qua Wings API, cache kết quả 5 phút và giới hạn mỗi lần quét 25 giây.
+Đã kiểm tra trên Pterodactyl 1.15.1. Với bản khác, patch có thể cần chỉnh lại đôi chút.
 
-## Cấu trúc
+## Trong repo
 
 ```text
 patches/
@@ -17,7 +17,7 @@ helper/
 
 ## Cài đặt
 
-Patch này dành cho panel 1.15.1 hoặc mã nguồn tương thích. Nên sao lưu các file liên quan trước khi áp dụng:
+Nên sao lưu các file liên quan trước khi bắt đầu:
 
 ```sh
 cd /var/www/pterodactyl
@@ -27,10 +27,14 @@ sudo tar -czf /root/pterodactyl-panel-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
   resources/scripts/components/server/files/FileObjectRow.tsx
 ```
 
-Áp dụng patch:
+Áp dụng ba patch:
 
 ```sh
 cd /var/www/pterodactyl
+git apply --check /path/to/pterodactyl-folder-size/patches/01-folder-size-controller.patch
+git apply --check /path/to/pterodactyl-folder-size/patches/02-folder-size-route.patch
+git apply --check /path/to/pterodactyl-folder-size/patches/03-folder-size-ui.patch
+
 git apply /path/to/pterodactyl-folder-size/patches/01-folder-size-controller.patch
 git apply /path/to/pterodactyl-folder-size/patches/02-folder-size-route.patch
 git apply /path/to/pterodactyl-folder-size/patches/03-folder-size-ui.patch
@@ -39,18 +43,19 @@ git apply /path/to/pterodactyl-folder-size/patches/03-folder-size-ui.patch
 Cài helper:
 
 ```sh
-install -o root -g root -m 0750 \
+sudo install -o root -g root -m 0750 \
   /path/to/pterodactyl-folder-size/helper/ptero-folder-size \
   /usr/local/sbin/ptero-folder-size
 
 printf '%s\n' \
   'www-data ALL=(root) NOPASSWD: /usr/local/sbin/ptero-folder-size *' \
   | sudo tee /etc/sudoers.d/pterodactyl-folder-size >/dev/null
+
 sudo chmod 0440 /etc/sudoers.d/pterodactyl-folder-size
 sudo visudo -cf /etc/sudoers.d/pterodactyl-folder-size
 ```
 
-Build frontend và xóa cache Laravel. Các lệnh `php artisan` phải chạy dưới `www-data`:
+Build lại frontend và xóa cache:
 
 ```sh
 cd /var/www/pterodactyl
@@ -58,17 +63,17 @@ sudo -u www-data yarn build:production
 sudo -u www-data php artisan optimize:clear
 ```
 
-Mở **Files**, chọn một thư mục và bấm **Size**. Kết quả hiển thị theo định dạng dung lượng của panel.
+Sau đó vào **Files**, chọn một thư mục và bấm **Size**.
 
 ## Helper
 
-Có thể kiểm tra riêng bằng:
+Có thể chạy thử trực tiếp:
 
 ```sh
 /usr/local/sbin/ptero-folder-size <server-uuid> /plugins
 ```
 
-Helper kiểm tra UUID và đường dẫn nằm trong volume, bỏ qua symlink, giới hạn thời gian chạy và dùng `du -sb`. Tham số host chỉ dùng khi cần chuyển tiếp sang node khác.
+Helper dùng `du -sb`, kiểm tra đường dẫn trong volume, bỏ qua symlink và có giới hạn thời gian. Tham số host thứ ba chỉ cần khi volume nằm trên node khác.
 
 ## Gỡ bỏ
 
@@ -77,12 +82,14 @@ cd /var/www/pterodactyl
 git apply -R /path/to/pterodactyl-folder-size/patches/03-folder-size-ui.patch
 git apply -R /path/to/pterodactyl-folder-size/patches/02-folder-size-route.patch
 git apply -R /path/to/pterodactyl-folder-size/patches/01-folder-size-controller.patch
+
 sudo rm -f /usr/local/sbin/ptero-folder-size
 sudo rm -f /etc/sudoers.d/pterodactyl-folder-size
+
 sudo -u www-data yarn build:production
 sudo -u www-data php artisan optimize:clear
 ```
 
 ## Giấy phép
 
-MIT. Pterodactyl Panel và các thành phần gốc vẫn thuộc giấy phép tương ứng của dự án Pterodactyl.
+MIT. Pterodactyl Panel và các thành phần gốc vẫn giữ giấy phép tương ứng của dự án Pterodactyl.
