@@ -17,7 +17,7 @@ helper/
 
 ## Cài đặt
 
-Patch này dành cho panel 1.15.1 hoặc mã nguồn tương thích. Nên sao lưu bốn file trước khi áp dụng:
+Patch này dành cho panel 1.15.1 hoặc mã nguồn tương thích. Nên sao lưu các file liên quan trước khi áp dụng:
 
 ```sh
 cd /var/www/pterodactyl
