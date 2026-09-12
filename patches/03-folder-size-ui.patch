@@ -1,8 +1,8 @@
-diff --git a/resources/scripts/components/server/files/FileObjectRow.tsx b/resources/scripts/components/server/files/FileObjectRow.tsx
-index c25930e..a7b9782 100644
+﻿diff --git a/resources/scripts/components/server/files/FileObjectRow.tsx b/resources/scripts/components/server/files/FileObjectRow.tsx
+index c25930e..d15371d 100644
 --- a/resources/scripts/components/server/files/FileObjectRow.tsx
 +++ b/resources/scripts/components/server/files/FileObjectRow.tsx
-@@ -1,10 +1,11 @@
+@@ -1,8 +1,9 @@
  import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 -import { faFileAlt, faFileArchive, faFileImport, faFolder } from '@fortawesome/free-solid-svg-icons';
 +import { faCalculator, faFileAlt, faFileArchive, faFileImport, faFolder } from '@fortawesome/free-solid-svg-icons';
@@ -14,23 +14,7 @@ index c25930e..a7b9782 100644
  import { FileObject } from '@/api/server/files/loadDirectory';
  import FileDropdownMenu from '@/components/server/files/FileDropdownMenu';
  import { ServerContext } from '@/state/server';
- import { NavLink, useRouteMatch } from 'react-router-dom';
- import tw from 'twin.macro';
-@@ -12,10 +13,11 @@ import isEqual from 'react-fast-compare';
- import SelectFileCheckbox from '@/components/server/files/SelectFileCheckbox';
- import { usePermissions } from '@/plugins/usePermissions';
- import { join } from 'pathe';
- import { bytesToString } from '@/lib/formatters';
- import styles from './style.module.css';
-+import { useStoreState } from '@/state/hooks';
- 
- const Clickable: React.FC<{ file: FileObject }> = memo(({ file, children }) => {
-     const [canRead] = usePermissions(['file.read']);
-     const [canReadContents] = usePermissions(['file.read-content']);
-     const directory = ServerContext.useStoreState((state) => state.files.directory);
-@@ -32,11 +34,38 @@ const Clickable: React.FC<{ file: FileObject }> = memo(({ file, children }) => {
-             {children}
-         </NavLink>
+@@ -34,7 +35,33 @@ const Clickable: React.FC<{ file: FileObject }> = memo(({ file, children }) => {
      );
  }, isEqual);
  
@@ -38,7 +22,6 @@ index c25930e..a7b9782 100644
 +const FileObjectRow = ({ file }: { file: FileObject }) => {
 +    const id = ServerContext.useStoreState((state) => state.server.data!.id);
 +    const directory = ServerContext.useStoreState((state) => state.files.directory);
-+    const isAdmin = useStoreState((state) => state.user.data!.rootAdmin);
 +    const [folderSize, setFolderSize] = useState<number | null>(null);
 +    const [calculatingSize, setCalculatingSize] = useState(false);
 +    const [sizeError, setSizeError] = useState<string | null>(null);
@@ -66,15 +49,11 @@ index c25930e..a7b9782 100644
      <div
          className={styles.file_row}
          key={file.name}
-         onContextMenu={(e) => {
-             e.preventDefault();
-@@ -60,13 +89,26 @@ const FileObjectRow = ({ file }: { file: FileObject }) => (
-                 {Math.abs(differenceInHours(file.modifiedAt, new Date())) > 48
-                     ? format(file.modifiedAt, 'MMM do, yyyy h:mma')
+@@ -62,9 +89,22 @@ const FileObjectRow = ({ file }: { file: FileObject }) => (
                      : formatDistanceToNow(file.modifiedAt, { addSuffix: true })}
              </div>
          </Clickable>
-+        {isAdmin && !file.isFile && (
++        {!file.isFile && (
 +            <button
 +                type={'button'}
 +                css={tw`flex-none mr-3 px-2 py-1 rounded text-xs text-neutral-300 bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50`}
@@ -94,5 +73,3 @@ index c25930e..a7b9782 100644
  
  export default memo(FileObjectRow, (prevProps, nextProps) => {
      /* eslint-disable @typescript-eslint/no-unused-vars */
-     const { isArchiveType, isEditable, ...prevFile } = prevProps.file;
-     const { isArchiveType: nextIsArchiveType, isEditable: nextIsEditable, ...nextFile } = nextProps.file;

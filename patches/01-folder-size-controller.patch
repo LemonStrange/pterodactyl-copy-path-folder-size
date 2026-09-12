@@ -16,20 +16,18 @@ index d5ee9e7..9eb2268 100644
  use Illuminate\Http\JsonResponse;
  use Pterodactyl\Facades\Activity;
  use Pterodactyl\Services\Nodes\NodeJWTService;
-@@ -50,10 +53,115 @@ class FileController extends ClientApiController
+@@ -50,10 +53,113 @@ class FileController extends ClientApiController
          return $this->fractal->collection($contents)
              ->transformWith($this->getTransformer(FileObjectTransformer::class))
              ->toArray();
      }
  
 +    /**
-+     * Calculates a directory size on demand for root administrators.
++     * Calculates a directory size on demand.
 +     * Results are briefly cached and only one scan per server may run at once.
 +     */
 +    public function folderSize(ListFilesRequest $request, Server $server): JsonResponse
 +    {
-+        abort_unless($request->user()->root_admin, Response::HTTP_FORBIDDEN);
-+
 +        $directory = '/' . ltrim((string) $request->query('directory', '/'), '/');
 +        if (strlen($directory) > 4096 || str_contains($directory, "\0")) {
 +            return new JsonResponse(['message' => 'Invalid directory path.'], Response::HTTP_UNPROCESSABLE_ENTITY);

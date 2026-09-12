@@ -2,7 +2,7 @@
 
 Bản vá nhỏ cho Pterodactyl Panel 1.15.1: thêm nút `Size` vào các thư mục trong File Manager.
 
-Tính năng chỉ dành cho `root_admin`. Panel ưu tiên helper chạy trên node chứa volume, có fallback qua Wings API, cache kết quả 5 phút và giới hạn mỗi lần quét 25 giây. Không cần restart Minecraft server.
+Panel ưu tiên helper chạy trên node chứa volume, có fallback qua Wings API, cache kết quả 5 phút và giới hạn mỗi lần quét 25 giây. Không cần restart Minecraft server.
 
 ## Cấu trúc
 
