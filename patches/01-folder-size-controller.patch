@@ -1,0 +1,134 @@
+diff --git "a/work\\patch-check\\app\\Http\\Controllers\\Api\\Client\\Servers\\FileController.php" "b/work\\patch-check\\current\\app\\Http\\Controllers\\Api\\Client\\Servers\\FileController.php"
+index d5ee9e7..9eb2268 100644
+--- a/app/Http/Controllers/Api/Client/Servers/FileController.php
++++ b/app/Http/Controllers/Api/Client/Servers/FileController.php
+@@ -2,10 +2,13 @@
+ 
+ namespace Pterodactyl\Http\Controllers\Api\Client\Servers;
+ 
+ use Carbon\CarbonImmutable;
+ use Illuminate\Http\Response;
++use Illuminate\Support\Facades\Cache;
++use Symfony\Component\Process\Process;
++use Symfony\Component\Process\Exception\ProcessTimedOutException;
+ use Pterodactyl\Enum\JwtScope;
+ use Pterodactyl\Models\Server;
+ use Illuminate\Http\JsonResponse;
+ use Pterodactyl\Facades\Activity;
+ use Pterodactyl\Services\Nodes\NodeJWTService;
+@@ -50,10 +53,115 @@ class FileController extends ClientApiController
+         return $this->fractal->collection($contents)
+             ->transformWith($this->getTransformer(FileObjectTransformer::class))
+             ->toArray();
+     }
+ 
++    /**
++     * Calculates a directory size on demand for root administrators.
++     * Results are briefly cached and only one scan per server may run at once.
++     */
++    public function folderSize(ListFilesRequest $request, Server $server): JsonResponse
++    {
++        abort_unless($request->user()->root_admin, Response::HTTP_FORBIDDEN);
++
++        $directory = '/' . ltrim((string) $request->query('directory', '/'), '/');
++        if (strlen($directory) > 4096 || str_contains($directory, "\0")) {
++            return new JsonResponse(['message' => 'Invalid directory path.'], Response::HTTP_UNPROCESSABLE_ENTITY);
++        }
++
++        $cacheKey = sprintf('folder-size:%s:%s', $server->uuid, hash('sha256', $directory));
++        if (Cache::has($cacheKey)) {
++            return new JsonResponse(['bytes' => Cache::get($cacheKey), 'cached' => true]);
++        }
++
++        $lock = Cache::lock(sprintf('folder-size-scan:%s', $server->uuid), 35);
++        if (!$lock->get()) {
++            return new JsonResponse([
++                'message' => 'Another folder size calculation is already running for this server.',
++            ], Response::HTTP_TOO_MANY_REQUESTS);
++        }
++
++        try {
++            $folderSizeHost = $server->allocation?->ip ?: $server->node->fqdn;
++
++            $process = new Process([
++                'sudo',
++                '-n',
++                '/usr/local/sbin/ptero-folder-size',
++                $server->uuid,
++                $directory,
++                $folderSizeHost,
++            ]);
++            $process->setTimeout(25);
++            $process->run();
++
++            if ($process->isSuccessful() && ctype_digit(trim($process->getOutput()))) {
++                $bytes = (int) trim($process->getOutput());
++            } else {
++                $bytes = $this->calculateFolderSizeViaWings($server, $directory);
++            }
++
++            Cache::put($cacheKey, $bytes, now()->addMinutes(5));
++
++            Activity::event('server:file.folder-size')->property('directory', $directory)->log();
++
++            return new JsonResponse(['bytes' => $bytes, 'cached' => false]);
++        } catch (ProcessTimedOutException) {
++            try {
++                $bytes = $this->calculateFolderSizeViaWings($server, $directory);
++                Cache::put($cacheKey, $bytes, now()->addMinutes(5));
++
++                return new JsonResponse(['bytes' => $bytes, 'cached' => false]);
++            } catch (\Throwable) {
++                return new JsonResponse([
++                    'message' => 'The calculation exceeded 25 seconds and was stopped to protect server performance.',
++                ], Response::HTTP_GATEWAY_TIMEOUT);
++            }
++        } catch (\Throwable) {
++            return new JsonResponse([
++                'message' => 'Unable to calculate this folder size.',
++            ], Response::HTTP_UNPROCESSABLE_ENTITY);
++        } finally {
++            $lock->release();
++        }
++    }
++
++    private function calculateFolderSizeViaWings(Server $server, string $directory): int
++    {
++        $this->fileRepository->setServer($server);
++
++        $bytes = 0;
++        $seenDirectories = 0;
++        $queue = [$directory];
++
++        while ($path = array_shift($queue)) {
++            if (++$seenDirectories > 1500) {
++                throw new \RuntimeException('Folder contains too many subdirectories to calculate safely.');
++            }
++
++            foreach ($this->fileRepository->getDirectory($path) as $item) {
++                $name = (string) ($item['name'] ?? '');
++                if ($name === '' || $name === '.' || $name === '..') {
++                    continue;
++                }
++
++                if (($item['file'] ?? true) === true) {
++                    $bytes += (int) ($item['size'] ?? 0);
++                    continue;
++                }
++
++                if (($item['symlink'] ?? false) === true) {
++                    continue;
++                }
++
++                $queue[] = rtrim($path, '/') . '/' . $name;
++            }
++        }
++
++        return $bytes;
++    }
++
+     /**
+      * Return the contents of a specified file for the user.
+      *
+      * @throws \Throwable
+      */

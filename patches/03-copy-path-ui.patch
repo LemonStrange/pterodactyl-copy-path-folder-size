@@ -1,0 +1,86 @@
+diff --git "a/work\\patch-check\\resources\\scripts\\components\\server\\files\\FileManagerContainer.tsx" "b/work\\patch-check\\current\\resources\\scripts\\components\\server\\files\\FileManagerContainer.tsx"
+index 3bebd20..a1c49fc 100644
+--- a/resources/scripts/components/server/files/FileManagerContainer.tsx
++++ b/resources/scripts/components/server/files/FileManagerContainer.tsx
+@@ -15,11 +15,11 @@ import { ServerContext } from '@/state/server';
+ import useFileManagerSwr from '@/plugins/useFileManagerSwr';
+ import FileManagerStatus from '@/components/server/files/FileManagerStatus';
+ import MassActionsBar from '@/components/server/files/MassActionsBar';
+ import UploadButton from '@/components/server/files/UploadButton';
+ import ServerContentBlock from '@/components/elements/ServerContentBlock';
+-import { useStoreActions } from '@/state/hooks';
++import { useStoreActions, useStoreState } from '@/state/hooks';
+ import ErrorBoundary from '@/components/elements/ErrorBoundary';
+ import { FileActionCheckbox } from '@/components/server/files/SelectFileCheckbox';
+ import { hashToPath } from '@/helpers';
+ import style from './style.module.css';
+ 
+@@ -30,14 +30,17 @@ const sortFiles = (files: FileObject[]): FileObject[] => {
+     return sortedFiles.filter((file, index) => index === 0 || file.name !== sortedFiles[index - 1].name);
+ };
+ 
+ export default () => {
+     const id = ServerContext.useStoreState((state) => state.server.data!.id);
++    const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
++    const isAdmin = useStoreState((state) => state.user.data!.rootAdmin);
+     const { hash } = useLocation();
+     const { data: files, error, mutate } = useFileManagerSwr();
+     const directory = ServerContext.useStoreState((state) => state.files.directory);
+     const clearFlashes = useStoreActions((actions) => actions.flashes.clearFlashes);
++    const addFlash = useStoreActions((actions) => actions.flashes.addFlash);
+     const setDirectory = ServerContext.useStoreActions((actions) => actions.files.setDirectory);
+ 
+     const setSelectedFiles = ServerContext.useStoreActions((actions) => actions.files.setSelectedFiles);
+     const selectedFilesLength = ServerContext.useStoreState((state) => state.files.selectedFiles.length);
+ 
+@@ -53,10 +56,34 @@ export default () => {
+ 
+     const onSelectAllClick = (e: React.ChangeEvent<HTMLInputElement>) => {
+         setSelectedFiles(e.currentTarget.checked ? files?.map((file) => file.name) || [] : []);
+     };
+ 
++    const normalizedDirectory = `/${directory.replace(/^\/+|\/+$/g, '')}`;
++    const hostDirectoryPath = `/var/lib/pterodactyl/volumes/${uuid}${
++        normalizedDirectory === '/' ? '' : normalizedDirectory
++    }`;
++
++    const onCopyHostPath = async () => {
++        try {
++            await navigator.clipboard.writeText(hostDirectoryPath);
++            addFlash({
++                key: 'files',
++                type: 'success',
++                title: 'Path copied',
++                message: hostDirectoryPath,
++            });
++        } catch (error) {
++            addFlash({
++                key: 'files',
++                type: 'error',
++                title: 'Could not copy path',
++                message: 'Your browser blocked clipboard access. Please allow clipboard permission and try again.',
++            });
++        }
++    };
++
+     if (error) {
+         return <ServerError message={httpErrorToHuman(error)} onRetry={() => mutate()} />;
+     }
+ 
+     return (
+@@ -71,10 +98,15 @@ export default () => {
+                                 checked={selectedFilesLength === (files?.length === 0 ? -1 : files?.length)}
+                                 onChange={onSelectAllClick}
+                             />
+                         }
+                     />
++                    {isAdmin && (
++                        <Button css={tw`ml-3 whitespace-nowrap`} onClick={onCopyHostPath} title={hostDirectoryPath}>
++                            Copy Path
++                        </Button>
++                    )}
+                     <Can action={'file.create'}>
+                         <div className={style.manager_actions}>
+                             <FileManagerStatus />
+                             <NewDirectoryButton />
+                             <UploadButton />

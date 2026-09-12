@@ -1,0 +1,16 @@
+diff --git "a/work\\patch-check\\routes\\api-client.php" "b/work\\patch-check\\current\\routes\\api-client.php"
+index b5595ec..6687fbd 100644
+--- a/routes/api-client.php
++++ b/routes/api-client.php
+@@ -79,10 +79,11 @@ Route::group([
+         Route::post('/{database}/rotate-password', [Client\Servers\DatabaseController::class, 'rotatePassword']);
+         Route::delete('/{database}', [Client\Servers\DatabaseController::class, 'delete']);
+     });
+ 
+     Route::group(['prefix' => '/files'], function () {
++        Route::get('/folder-size', [Client\Servers\FileController::class, 'folderSize']);
+         Route::get('/list', [Client\Servers\FileController::class, 'directory']);
+         Route::get('/contents', [Client\Servers\FileController::class, 'contents']);
+         Route::get('/download', [Client\Servers\FileController::class, 'download']);
+         Route::put('/rename', [Client\Servers\FileController::class, 'rename']);
+         Route::post('/copy', [Client\Servers\FileController::class, 'copy']);
